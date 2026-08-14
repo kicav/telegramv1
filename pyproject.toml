@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "telegram-migration-studio"
+version = "1.0.0"
+description = "Telegram Migration Studio Core V1 Windows desktop application"
+readme = "README.md"
+requires-python = ">=3.13"
+license = {text = "MIT"}
+authors = [{name = "kicav"}]
+dependencies = [
+  "PySide6>=6.8,<7",
+  "Telethon>=1.44,<2",
+  "openpyxl>=3.1,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-cov>=6",
+  "ruff>=0.9",
+  "mypy>=1.14",
+  "Nuitka>=2.6",
+  "ordered-set>=4.1",
+  "zstandard>=0.23",
+]
+
+[project.scripts]
+tms = "tms.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tms"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+packages = ["tms"]

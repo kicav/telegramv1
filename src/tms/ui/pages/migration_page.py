@@ -1,0 +1,5 @@
+from PySide6.QtWidgets import QWidget,QFormLayout,QDoubleSpinBox,QPushButton,QLabel,QProgressBar,QHBoxLayout,QVBoxLayout
+from ...core.constants import MIN_INVITE_INTERVAL_SECONDS,MAX_INVITE_INTERVAL_SECONDS,DEFAULT_INVITE_INTERVAL_SECONDS
+class MigrationPage(QWidget):
+    def __init__(self,ctx,parent=None):
+        super().__init__(parent);l=QVBoxLayout(self);self.summary=QLabel('Run target pre-check before migration.');l.addWidget(self.summary);form=QFormLayout();self.interval=QDoubleSpinBox();self.interval.setRange(MIN_INVITE_INTERVAL_SECONDS,MAX_INVITE_INTERVAL_SECONDS);self.interval.setValue(DEFAULT_INVITE_INTERVAL_SECONDS);self.interval.setSingleStep(.5);form.addRow('Invite interval (s)',self.interval);l.addLayout(form);row=QHBoxLayout();self.precheck=QPushButton('PRECHECK');self.start=QPushButton('START');self.pause=QPushButton('Pause');self.stop=QPushButton('Stop');[row.addWidget(b) for b in (self.precheck,self.start,self.pause,self.stop)];l.addLayout(row);self.progress=QProgressBar();l.addWidget(self.progress);self.counters=QLabel('Success 0   Skip 0   Failed 0   Waiting 0');l.addWidget(self.counters);l.addStretch()
