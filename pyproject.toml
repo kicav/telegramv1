@@ -4,27 +4,16 @@ build-backend = "hatchling.build"
 
 [project]
 name = "telegram-migration-studio"
-version = "1.0.0"
-description = "Telegram Migration Studio Core V1 Windows desktop application"
+version = "1.2.0"
+description = "Telegram Migration Studio V1.2 Stable Fast Path"
 readme = "README.md"
 requires-python = ">=3.13"
 license = {text = "MIT"}
 authors = [{name = "kicav"}]
-dependencies = [
-  "PySide6>=6.8,<7",
-  "Telethon==1.44.0",
-  "openpyxl>=3.1,<4",
-]
+dependencies = ["PySide6>=6.8,<7", "Telethon==1.44.0", "openpyxl>=3.1,<4"]
 
 [project.optional-dependencies]
-dev = [
-  "pytest>=8.3",
-  "pytest-cov>=6",
-  "ruff>=0.9",
-  "Nuitka>=2.6",
-  "ordered-set>=4.1",
-  "zstandard>=0.23",
-]
+dev = ["pytest>=8.3", "pytest-cov>=6", "ruff>=0.9", "Nuitka>=2.6", "ordered-set>=4.1", "zstandard>=0.23"]
 
 [project.scripts]
 tms = "tms.main:main"

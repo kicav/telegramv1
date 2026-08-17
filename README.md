@@ -1,101 +1,45 @@
-# Telegram Migration Studio — Core V1
+# Telegram Migration Studio V1.2 — Stable Fast Path
 
-Windows desktop application for Telegram account/session management, group-member collection, local datasets, filter/dedup workflows, target pre-check, resumable migration jobs, persistent logs and CSV/XLSX import/export.
+Ứng dụng desktop Windows để quản lý tài khoản Telegram, thu thập/quản lý member, lọc/gộp dữ liệu, thêm hoặc xóa member, theo dõi tiến độ/lỗi/server wait, pause/resume/recovery và import/export CSV/XLSX.
 
-The implementation follows the locked Core V1 design. It does **not** rotate accounts to bypass Telegram rate limits. A Telegram server wait overrides the local 3–8 second scheduler and remains tied to the same account/job/candidate.
+## Kiến trúc
+- PySide6 UI tiếng Việt.
+- Dedicated asyncio Telegram runtime + Telethon 1.44.
+- WorkerPool(2) cho file/DB read/filter.
+- SQLite WAL + một DBWriter cho toàn bộ write.
+- Prepare/Plan tách khỏi hot path; CandidateBuffer bounded ~500.
+- INVITE/REMOVE dùng chung `V12MigrationExecutor`.
+- Scheduler 3/5/8s, recovery 10s; server wait luôn ưu tiên.
+- RPC watchdog 30s; network retry có giới hạn 1/2/4s.
+- Không có proxy/account rotation để né limit, không Redis/Docker/backend.
 
-## Core workflow
-
-```text
-Account / Session
-      ↓
-Resolve source / joined group / import file
-      ↓
-Get Members → Dataset → Filter / Dedup / 2-file workflow
-      ↓
-Resolve target → Target pre-check
-      ↓
-Migration plan
-      ↓
-Prefetch → Cached InputUser → one-user Invite RPC
-      ↓
-Classifier → buffered persistence → scheduler → next
-      ↓
-Persistent results / logs / export / recovery
-```
-
-## Architecture guarantees
-
-- Qt thread is for UI/rendering/commands; Telegram RPCs never run there.
-- All Telethon clients live on one dedicated asyncio runtime thread.
-- SQLite uses WAL and one DBWriter pipeline; critical state is flushed immediately.
-- Member scans use pagination, a bounded 4-page queue, backpressure, dedup and checkpoints.
-- Access hashes are account-scoped `(account_id, peer_id)`.
-- CSV/XLSX is import/export only and never enters the migration hot path.
-- Target pre-check distinguishes `COMPLETE`, `PARTIAL` and `UNAVAILABLE` coverage.
-- Missing IDs under incomplete coverage become `UNKNOWN_TARGET_STATE`.
-- Migration prefetch is bounded; target/member entity resolution is not performed per candidate.
-- One candidate is sent per invite RPC.
-- `FLOOD_WAIT`/server wait is persisted and wins over local cadence; no wait-evasion account rotation.
-- Transient retry policy is 1s → 2s → 4s.
-- UI progress is aggregated at roughly 150 ms and member tables are paged Qt Model/View.
-- Join/Leave is utility-only; Messenger/Archive/Seeding/Script Runner are outside Core V1.
-
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the detailed design and [`LOCKED_SPEC.md`](LOCKED_SPEC.md) for review guardrails.
-
-## Requirements
-
-- Windows 10/11
-- Python 3.13
-- PySide6 / Qt 6
-- Telethon **1.44.0**
-- SQLite
-- openpyxl
-- Nuitka for standalone Windows packaging
-
-## Development
-
-Fast Windows setup + validation:
-
-```powershell
-./scripts/setup_windows.ps1
-.\.venv\Scripts\python.exe -m tms
-```
-
-Equivalent manual setup:
-
+## Cài đặt phát triển
 ```powershell
 py -3.13 -m venv .venv
-.venv\Scripts\Activate.ps1
+.\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
 pip install -e ".[dev]"
+python -m pytest -q
 python scripts/quality_gate.py
-python -m ruff check src tests scripts
-pytest -q
 python -m tms
 ```
 
-Telegram API credentials can be entered in **Accounts → Telegram API Settings** or supplied through:
+API ID/API Hash được cấu hình trong trang **Tài khoản** hoặc qua `TMS_TELEGRAM_API_ID` / `TMS_TELEGRAM_API_HASH`.
 
-```text
-TMS_TELEGRAM_API_ID
-TMS_TELEGRAM_API_HASH
-```
-
-Application state is stored under `%LOCALAPPDATA%\TelegramMigrationStudio\`.
-
-## Build Windows EXE
-
+## Build Windows
 ```powershell
-./scripts/build_windows.ps1
+powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1
 ```
+Nuitka tạo standalone build trong `dist/`.
 
-The build script runs tests + the architecture gate before Nuitka. GitHub Actions includes a Windows CI job and a Windows standalone build job for pull requests, manual runs and `v*` tags.
+## Luồng sử dụng
+1. Tài khoản: thêm số điện thoại, nhập API ID/API Hash, OTP/2FA, kết nối session.
+2. Nguồn member: nhập link/@username hoặc chọn group đã tham gia; quét member hoặc import CSV/XLSX.
+3. Member: xem/lọc dữ liệu theo trang.
+4. Thao tác: chọn tài khoản + dataset + group đích + INVITE/REMOVE + tốc độ; bấm **KIỂM TRA**, xem kế hoạch rồi **BẮT ĐẦU**.
+5. Khi Telegram trả `FLOOD_WAIT_X`, ứng dụng chờ đúng X giây và tự recovery 10 -> 8 -> target. Nếu không có duration, job dừng an toàn ở `RATE_LIMITED`.
 
-## Scope
+## Quality gate
+`python scripts/quality_gate.py` khóa các invariant: UI không gọi Telegram/SQL write trực tiếp, hot path không resolve/file scan, invite RPC chỉ một candidate, và write DB đi qua DBWriter.
 
-Included: account/session + OTP/2FA, multi-account management, group resolver/joined groups, member scanner, CSV/XLSX import, datasets and 1/2-file workflows, local filters/dedup, target pre-check, migration planner/executor, pause/resume/recovery, persistent logs/results/export, Join/Leave utility.
-
-Excluded by design: messenger campaigns, message archive, seeding, proxy/account rotation intended to evade server limits, and script runner.
-
-For usage steps, see [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md). Validation details are in [`docs/VALIDATION.md`](docs/VALIDATION.md).
+> Sử dụng công cụ theo quyền quản trị và chính sách của Telegram. V1.2 không cố né giới hạn phía server.
