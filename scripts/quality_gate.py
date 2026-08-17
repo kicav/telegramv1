@@ -1,10 +1,9 @@
-"""Dependency-free structural quality gate for the locked Core V1 architecture."""
+"""Dependency-free structural quality gate for Telegram Migration Studio V1.2."""
 from __future__ import annotations
 
 import ast
 from pathlib import Path
 import sys
-
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src" / "tms"
@@ -27,8 +26,7 @@ def parse_all() -> int:
 
 
 def assert_invariants() -> None:
-    ui_files = list((SRC / "ui").rglob("*.py"))
-    for path in ui_files:
+    for path in (SRC / "ui").rglob("*.py"):
         text = path.read_text(encoding="utf-8")
         for token in ("TelegramClient", ".gateway.", "INSERT INTO", "DELETE FROM"):
             if token in text:
@@ -52,7 +50,7 @@ def assert_invariants() -> None:
     offenders: list[str] = []
     for path in SRC.rglob("*.py"):
         text = path.read_text(encoding="utf-8")
-        rel = str(path.relative_to(SRC))
+        rel = path.relative_to(SRC).as_posix()
         if "database.connect()" in text and rel != "runtime/db_writer.py":
             offenders.append(rel)
         if ".db.connect()" in text:
@@ -64,12 +62,17 @@ def assert_invariants() -> None:
     if not schema.exists() or schema.stat().st_size < 1000:
         fail("SQLite schema is missing or unexpectedly small")
 
+    client = (SRC / "telegram" / "client_manager.py").read_text(encoding="utf-8")
+    for token in ("request_retries=0", "flood_sleep_threshold=0", "raise_last_call_error=True"):
+        if token not in client:
+            fail(f"V1.2 Telethon policy missing: {token}")
+
 
 def main() -> int:
     count = parse_all()
     assert_invariants()
     print(f"[OK] parsed {count} Python modules")
-    print("[OK] locked Core V1 architecture invariants")
+    print("[OK] Telegram Migration Studio V1.2 architecture invariants")
     return 0
 
 
