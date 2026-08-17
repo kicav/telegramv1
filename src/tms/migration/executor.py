@@ -86,6 +86,7 @@ class MigrationExecutor:
                 if transient<len(TRANSIENT_RETRY_DELAYS_SECONDS):
                     delay=TRANSIENT_RETRY_DELAYS_SECONDS[transient];transient+=1;control=await self._sleep(delay)
                     if await self._handle_control(control,job_id,account_id):return None,True
+                    if transient>=len(TRANSIENT_RETRY_DELAYS_SECONDS):return ItemUpdate(candidate.ordinal,MigrationItemState.FAILED,attempts,str(error.code),str(error)),False
                     continue
                 return ItemUpdate(candidate.ordinal,MigrationItemState.FAILED,attempts,str(error.code),str(error)),False
             self.scheduler.mark_stable_candidate();return ItemUpdate(candidate.ordinal,result.state,attempts,str(error.code),str(error)),False
